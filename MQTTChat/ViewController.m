@@ -11,7 +11,12 @@
 #import "ChatCell.h"
 
 @interface ViewController ()
+/*
+ * MQTTClient: keep a strong reference to your MQTTSessionManager here
+ */
 @property (strong, nonatomic) MQTTSessionManager *manager;
+
+
 @property (strong, nonatomic) NSDictionary *mqttSettings;
 @property (strong, nonatomic) NSMutableArray *chat;
 @property (weak, nonatomic) IBOutlet UILabel *status;
@@ -44,6 +49,11 @@
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    
+    /*
+     * MQTTClient: create an instance of MQTTSessionManager once and connect
+     * will is set to let the broker indicate to other subscribers if the connection is lost
+     */
     if (!self.manager) {
         self.manager = [[MQTTSessionManager alloc] init];
         self.manager.delegate = self;
@@ -66,6 +76,11 @@
     } else {
         [self.manager connectToLast];
     }
+    
+    /*
+     * MQTTCLient: observe the MQTTSessionManager's state to display the connection status
+     */
+    
     [self.manager addObserver:self
                    forKeyPath:@"state"
                       options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
@@ -149,16 +164,41 @@
 }
 
 - (IBAction)reconnect:(id)sender {
-    [self.manager sendData:[@"leaves chat" dataUsingEncoding:NSUTF8StringEncoding]
-                     topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
-     
-                       qos:MQTTQosLevelExactlyOnce
-                    retain:TRUE];
-    [self.manager disconnect];
-    [self.manager connectToLast];
+    switch (self.manager.state) {
+        case MQTTSessionManagerStateConnected:
+            /*
+             * MQTTClient: send goodby message and gracefully disconnect
+             */
+            
+            [self.manager sendData:[@"leaves chat" dataUsingEncoding:NSUTF8StringEncoding]
+                             topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
+             
+                               qos:MQTTQosLevelExactlyOnce
+                            retain:TRUE];
+            [self.manager disconnect];
+            break;
+        case MQTTSessionManagerStateStarting:
+            /*
+             * MQTTClient: connect to same broker again
+             */
+            
+            [self.manager connectToLast];
+            break;
+        case MQTTSessionManagerStateConnecting:
+        case MQTTSessionManagerStateClosed:
+        case MQTTSessionManagerStateClosing:
+        case MQTTSessionManagerStateError:
+        default:
+            //
+            break;
+    }
 }
 
 - (IBAction)send:(id)sender {
+    /*
+     * MQTTClient: send data to broker
+     */
+    
     [self.manager sendData:[self.message.text dataUsingEncoding:NSUTF8StringEncoding]
                      topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
 
@@ -170,6 +210,10 @@
  * MQTTSessionManagerDelegate
  */
 - (void)handleMessage:(NSData *)data onTopic:(NSString *)topic retained:(BOOL)retained {
+    /*
+     * MQTTClient: process received message
+     */
+    
     NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSString *senderString = [topic substringFromIndex:self.base.length + 1];
     
