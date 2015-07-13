@@ -17,6 +17,10 @@ MYPWD=`pwd`
 
 $INK -z -D -e "$MYPWD/$BASE-29@2x.png" -f 	$MYPWD/$SVG -w 58 -h 58
 $INK -z -D -e "$MYPWD/$BASE-29@3x.png" -f 	$MYPWD/$SVG -w 87 -h 87
+$INK -z -D -e "$MYPWD/$BASE-33.png" -f 	$MYPWD/$SVG -w 33 -h 33
+$IMAGEW "$MYPWD/$BASE-33.png" "$MYPWD/$BASE-33-noalpha.png"
+$INK -z -D -e "$MYPWD/$BASE-33@2x.png" -f 	$MYPWD/$SVG -w 66 -h 66
+$IMAGEW "$MYPWD/$BASE-33@2x.png" "$MYPWD/$BASE-33-noalpha@2x.png"
 $INK -z -D -e "$MYPWD/$BASE-40@2x.png" -f 	$MYPWD/$SVG -w 80 -h 80
 $INK -z -D -e "$MYPWD/$BASE-40@3x.png" -f 	$MYPWD/$SVG -w 120 -h 120
 $INK -z -D -e "$MYPWD/$BASE-60@2x.png" -f 	$MYPWD/$SVG -w 120 -h 120

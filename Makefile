@@ -1,4 +1,4 @@
-all: MQTTChat-29.png
+all: MQTTChat-29@2x.png
 
-MQTTChat-29.png:MQTTChat.svg
+MQTTChat-29@2x.png:MQTTChat.svg
 	./resize.sh MQTTChat.svg

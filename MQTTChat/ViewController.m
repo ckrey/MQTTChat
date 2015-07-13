@@ -23,7 +23,8 @@
 @property (weak, nonatomic) IBOutlet UITextField *message;
 @property (weak, nonatomic) IBOutlet UITableView *tableView;
 @property (strong, nonatomic) NSString *base;
-@property (weak, nonatomic) IBOutlet UIButton *reconnect;
+@property (weak, nonatomic) IBOutlet UIButton *connect;
+@property (weak, nonatomic) IBOutlet UIButton *disconnect;
 
 @end
 
@@ -45,10 +46,7 @@
     self.tableView.rowHeight = UITableViewAutomaticDimension;
     
     self.message.delegate = self;
-}
-
-- (void)viewWillAppear:(BOOL)animated {
-    [super viewWillAppear:animated];
+    
     
     /*
      * MQTTClient: create an instance of MQTTSessionManager once and connect
@@ -68,11 +66,14 @@
                            auth:false
                            user:nil
                            pass:nil
-                      willTopic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
+                      willTopic:[NSString stringWithFormat:@"%@/%@-%@",
+                                 self.base,
+                                 [UIDevice currentDevice].name,
+                                 self.tabBarItem.title]
                            will:[@"offline" dataUsingEncoding:NSUTF8StringEncoding]
                         willQos:MQTTQosLevelExactlyOnce
-                 willRetainFlag:true
-                   withClientId:[UIDevice currentDevice].name];
+                 willRetainFlag:FALSE
+                   withClientId:nil];
     } else {
         [self.manager connectToLast];
     }
@@ -85,46 +86,58 @@
                    forKeyPath:@"state"
                       options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
                       context:nil];
+
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
 }
 
 - (void)viewWillDisappear:(BOOL)animated {
-    [self.manager disconnect];
-    [self.manager removeObserver:self forKeyPath:@"state"];
-    [super viewWillDisappear:animated];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
     switch (self.manager.state) {
         case MQTTSessionManagerStateClosed:
             self.status.text = @"closed";
-            [self.reconnect setTitle:@"wait" forState:UIControlStateNormal];
+            self.disconnect.enabled = false;
+            self.connect.enabled = false;
             break;
         case MQTTSessionManagerStateClosing:
             self.status.text = @"closing";
-            [self.reconnect setTitle:@"wait" forState:UIControlStateNormal];
+            self.disconnect.enabled = false;
+            self.connect.enabled = false;
             break;
         case MQTTSessionManagerStateConnected:
-            self.status.text = [NSString stringWithFormat:@"connected as %@", [UIDevice currentDevice].name];
-           [self.reconnect setTitle:@"disconnect" forState:UIControlStateNormal];
+            self.status.text = [NSString stringWithFormat:@"connected as %@-%@",
+                                [UIDevice currentDevice].name,
+                                self.tabBarItem.title];
+            self.disconnect.enabled = true;
+            self.connect.enabled = false;
             [self.manager sendData:[@"joins chat" dataUsingEncoding:NSUTF8StringEncoding]
-                             topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
-             
+                             topic:[NSString stringWithFormat:@"%@/%@-%@",
+                                    self.base,
+                                    [UIDevice currentDevice].name,
+                                    self.tabBarItem.title]
                                qos:MQTTQosLevelExactlyOnce
-                            retain:TRUE];
+                            retain:FALSE];
 
             break;
         case MQTTSessionManagerStateConnecting:
             self.status.text = @"connecting";
-            [self.reconnect setTitle:@"wait" forState:UIControlStateNormal];
+            self.disconnect.enabled = false;
+            self.connect.enabled = false;
             break;
         case MQTTSessionManagerStateError:
             self.status.text = @"error";
-            [self.reconnect setTitle:@"connect" forState:UIControlStateNormal];
+            self.disconnect.enabled = false;
+            self.connect.enabled = false;
             break;
         case MQTTSessionManagerStateStarting:
         default:
             self.status.text = @"not connected";
-            [self.reconnect setTitle:@"connect" forState:UIControlStateNormal];
+            self.disconnect.enabled = false;
+            self.connect.enabled = true;
             break;
     }
 }
@@ -134,64 +147,31 @@
     return YES;
 }
 
-
-- (void) animateTextField: (UITextField*) textField up: (BOOL) up {
-    const int movementDistance = textField.frame.size.height + 224;
-    const float movementDuration = 0.3f;
-    
-    int movement = (up ? -movementDistance : movementDistance);
-    
-    [UIView beginAnimations: @"message" context: nil];
-    [UIView setAnimationBeginsFromCurrentState: YES];
-    [UIView setAnimationDuration: movementDuration];
-    self.view.frame = CGRectOffset(self.view.frame, 0, movement);
-    [UIView commitAnimations];
-}
-
-- (void)textFieldDidBeginEditing:(UITextField *)textField {
-    [self animateTextField: textField up: YES];
-}
-
-
-- (void)textFieldDidEndEditing:(UITextField *)textField {
-    [self animateTextField: textField up: NO];
-}
-
-
 - (IBAction)clear:(id)sender {
     [self.chat removeAllObjects];
     [self.tableView reloadData];
 }
+- (IBAction)connect:(id)sender {
+    /*
+     * MQTTClient: connect to same broker again
+     */
+    
+    [self.manager connectToLast];
+}
 
-- (IBAction)reconnect:(id)sender {
-    switch (self.manager.state) {
-        case MQTTSessionManagerStateConnected:
-            /*
-             * MQTTClient: send goodby message and gracefully disconnect
-             */
-            
-            [self.manager sendData:[@"leaves chat" dataUsingEncoding:NSUTF8StringEncoding]
-                             topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
-             
-                               qos:MQTTQosLevelExactlyOnce
-                            retain:TRUE];
-            [self.manager disconnect];
-            break;
-        case MQTTSessionManagerStateStarting:
-            /*
-             * MQTTClient: connect to same broker again
-             */
-            
-            [self.manager connectToLast];
-            break;
-        case MQTTSessionManagerStateConnecting:
-        case MQTTSessionManagerStateClosed:
-        case MQTTSessionManagerStateClosing:
-        case MQTTSessionManagerStateError:
-        default:
-            //
-            break;
-    }
+- (IBAction)disconnect:(id)sender {
+    /*
+     * MQTTClient: send goodby message and gracefully disconnect
+     */
+    [self.manager sendData:[@"leaves chat" dataUsingEncoding:NSUTF8StringEncoding]
+                     topic:[NSString stringWithFormat:@"%@/%@-%@",
+                            self.base,
+                            [UIDevice currentDevice].name,
+                            self.tabBarItem.title]
+                       qos:MQTTQosLevelExactlyOnce
+                    retain:FALSE];
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1.0]];
+    [self.manager disconnect];
 }
 
 - (IBAction)send:(id)sender {
@@ -200,10 +180,12 @@
      */
     
     [self.manager sendData:[self.message.text dataUsingEncoding:NSUTF8StringEncoding]
-                     topic:[NSString stringWithFormat:@"%@/%@", self.base, [UIDevice currentDevice].name]
-
+                     topic:[NSString stringWithFormat:@"%@/%@-%@",
+                            self.base,
+                            [UIDevice currentDevice].name,
+                            self.tabBarItem.title]
                        qos:MQTTQosLevelExactlyOnce
-                    retain:TRUE];
+                    retain:FALSE];
 }
 
 /*
@@ -217,7 +199,7 @@
     NSString *dataString = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     NSString *senderString = [topic substringFromIndex:self.base.length + 1];
     
-    [self.chat insertObject:[NSString stringWithFormat:@"%@: %@", senderString, dataString] atIndex:0];
+    [self.chat insertObject:[NSString stringWithFormat:@"%@:\n%@", senderString, dataString] atIndex:0];
     [self.tableView reloadData];
 }
 
