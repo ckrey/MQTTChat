@@ -3,14 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>host</key>
-	<string>test.mosquitto.org</string>
+	<string>broker.mqttdashboard.com</string>
 	<key>port</key>
 	<integer>1883</integer>
 	<key>tls</key>
 	<false/>
 	<key>base</key>
 	<string>MQTTChat</string>
-	<key>New item - 2</key>
-	<string></string>
 </dict>
 </plist>
