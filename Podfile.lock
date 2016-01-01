@@ -1,10 +1,22 @@
 PODS:
-  - MQTTClient (0.2.2)
+  - CocoaLumberjack (2.2.0):
+    - CocoaLumberjack/Default (= 2.2.0)
+    - CocoaLumberjack/Extensions (= 2.2.0)
+  - CocoaLumberjack/Core (2.2.0)
+  - CocoaLumberjack/Default (2.2.0):
+    - CocoaLumberjack/Core
+  - CocoaLumberjack/Extensions (2.2.0):
+    - CocoaLumberjack/Default
+  - MQTTClient (0.6.1):
+    - MQTTClient/Core (= 0.6.1)
+  - MQTTClient/Core (0.6.1):
+    - CocoaLumberjack
 
 DEPENDENCIES:
   - MQTTClient
 
 SPEC CHECKSUMS:
-  MQTTClient: 9406028ea7773676bd65bfcac4d0e595169d83f6
+  CocoaLumberjack: 17fe8581f84914d5d7e6360f7c70022b173c3ae0
+  MQTTClient: f5d0d67959834bad34365469672df883d2c75e87
 
-COCOAPODS: 0.37.1
+COCOAPODS: 0.39.0

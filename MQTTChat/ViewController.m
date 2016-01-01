@@ -55,9 +55,8 @@
     if (!self.manager) {
         self.manager = [[MQTTSessionManager alloc] init];
         self.manager.delegate = self;
-        self.manager.subscriptions = [[NSMutableDictionary alloc] init];
-        [self.manager.subscriptions setObject:[NSNumber numberWithInt:MQTTQosLevelExactlyOnce]
-                                       forKey:[NSString stringWithFormat:@"%@/#", self.base]];
+        self.manager.subscriptions = [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:MQTTQosLevelExactlyOnce]
+                                                                 forKey:[NSString stringWithFormat:@"%@/#", self.base]];
         [self.manager connectTo:self.mqttSettings[@"host"]
                            port:[self.mqttSettings[@"port"] intValue]
                             tls:[self.mqttSettings[@"tls"] boolValue]

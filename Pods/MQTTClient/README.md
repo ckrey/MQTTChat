@@ -13,11 +13,19 @@ an Objective-C native MQTT Framework http://mqtt.org
 * mosca
 * vernemq
 * emqtt
+* moquette
+* ActiveMQ
+* Apollo
+* CloudMQTT
+* aws
 
 ### Howto
 
-Add MQTTClient.framework from the dist directory to your IOS project
-or use the CocoaPod MQTTClient
+Use the CocoaPod MQTTClient! 
+
+Or use the dynamic library created in the MQTTFramework target.
+
+Or include the source from here.
 
 [Documentation](MQTTClient/dist/documentation/html/index.html)
 
@@ -26,63 +34,58 @@ or use the CocoaPod MQTTClient
 Create a new client and connect to a broker:
 
 ```objective-c
-MQTTSession *session = [[MQTTSession alloc]initWithClientId:@"client_id"]
+
+\@interface MyDelegate : ... MQTTSessionDelegate>
+...
+
+MQTTSession *session = [[MQTTSession alloc] init];
 
 // Set delegate appropriately to receive various events
-// See MQTTSession.h for information on various handlers
+// Set MQTTSessionDelegate // See MQTTSession.h for information on various handlers
 // you can subscribe to.
+
 [session setDelegate:self];
 
-[session connectAndWaitToHost:@"host" port:1883 usingSSL:NO];
+session.host = @"localhost";
+session.port = 1883;
+
+[session connectAndWaitTimeout:30];  //this is part of the synchronous API
 
 ```
 
 Subscribe to a topic:
 
 ```objective-c
-[session subscribeToTopic:topic atLevel:MQTTQosLevelAtLeastOnce];
+[session subscribeToTopic:@"example/#" atLevel:2 subscribeHandler:^(NSError *error, NSArray<NSNumber *> *gQoss){
+    if (error) {
+        NSLog(@"Subscription failed %@", error.localizedDescription);
+    } else {
+        NSLog(@"Subscription sucessfull! Granted Qos: %@", gQoss);
+    }
+ }]; // this is part of the block API
+
+```
+
+Add the following to receive messages for the subscribed topics
+```objective-c
+ - (void)newMessage:(MQTTSession *)session
+	data:(NSData *)data
+	onTopic:(NSString *)topic
+	qos:(MQTTQosLevel)qos
+	retained:(BOOL)retained
+	mid:(unsigned int)mid {
+	// this is one of the delegate callbacks
+}
 ```
 
 Publish a message to a topic:
 
 ```objective-c
 [session publishAndWaitData:data
-	                onTopic:@"topic"
-	                 retain:NO
-				        qos:MQTTQosLevelAtLeastOnce]
+                    onTopic:@"topic"
+                     retain:NO
+	                qos:MQTTQosLevelAtLeastOnce]; // this is part of the asynchronous API
 ```
-
-### License
-
-Copyright (C) 2013-2015 Christoph Krey
-
-Based on and fully API backward compatible with
-
-https://github.com/m2mIO/mqttIO-objC
-
-Copyright © 2011, 2013 2lemetry, LLC
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that
-the following conditions are met:
-
-Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer
-in the documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES|
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-
-#### Framework
-
-Framework build using instructions and scripts by Jeff Verkoeyen https://github.com/jverkoey/iOS-Framework
 
 #### docs
 
