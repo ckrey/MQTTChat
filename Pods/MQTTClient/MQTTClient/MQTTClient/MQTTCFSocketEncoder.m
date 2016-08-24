@@ -2,25 +2,12 @@
 // MQTTCFSocketEncoder.m
 // MQTTClient.framework
 //
-// Copyright (c) 2013-2015, Christoph Krey
+// Copyright © 2013-2016, Christoph Krey
 //
 
 #import "MQTTCFSocketEncoder.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTCFSocketEncoder()
 @property (strong, nonatomic) NSMutableData *buffer;
@@ -39,6 +26,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     self.runLoopMode = NSRunLoopCommonModes;
     
     return self;
+}
+
+- (void)dealloc {
+    [self close];
 }
 
 - (void)open {
@@ -100,7 +91,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 - (BOOL)send:(NSData *)data {
     @synchronized(self) {
         if (self.state != MQTTCFSocketEncoderStateReady) {
-            DDLogWarn(@"[MQTTCFSocketEncoder] not MQTTCFSocketEncoderStateReady");
+            DDLogInfo(@"[MQTTCFSocketEncoder] not MQTTCFSocketEncoderStateReady");
             return FALSE;
         }
         

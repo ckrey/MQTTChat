@@ -2,7 +2,7 @@
 // MQTTSessionSynchron.m
 // MQTTClient.framework
 //
-// Copyright (c) 2013-2015, Christoph Krey
+// Copyright © 2013-2016, Christoph Krey
 //
 
 /**
@@ -16,20 +16,7 @@
 #import "MQTTSessionLegacy.h"
 #import "MQTTSessionSynchron.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTSession()
 @property (nonatomic) BOOL synchronPub;
@@ -107,10 +94,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     
     DDLogVerbose(@"[MQTTSessionSynchron] end subscribe");
     
-    if (self.synchronSubMid == mid) {
-        return TRUE;
-    } else {
+    if (self.synchronSub || self.synchronSubMid != mid) {
         return FALSE;
+    } else {
+        return TRUE;
     }
 }
 
@@ -131,10 +118,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     
     DDLogVerbose(@"[MQTTSessionSynchron] end subscribe");
     
-    if (self.synchronSubMid == mid) {
-        return TRUE;
-    } else {
+    if (self.synchronSub || self.synchronSubMid != mid) {
         return FALSE;
+    } else {
+        return TRUE;
     }
 }
 
@@ -156,10 +143,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     
     DDLogVerbose(@"[MQTTSessionSynchron] end unsubscribe");
     
-    if (self.synchronUnsubMid == mid) {
-        return TRUE;
-    } else {
+    if (self.synchronUnsub || self.synchronUnsubMid != mid) {
         return FALSE;
+    } else {
+        return TRUE;
     }
 }
 
@@ -180,10 +167,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     
     DDLogVerbose(@"[MQTTSessionSynchron] end unsubscribe");
     
-    if (self.synchronUnsubMid == mid) {
-        return TRUE;
-    } else {
+    if (self.synchronUnsub || self.synchronUnsubMid != mid) {
         return FALSE;
+    } else {
+        return TRUE;
     }
 }
 
@@ -216,10 +203,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         
         DDLogVerbose(@"[MQTTSessionSynchron] end publish");
         
-        if (self.synchronPubMid == mid) {
-            return TRUE;
-        } else {
+        if (self.synchronPub || self.synchronPubMid != mid) {
             return FALSE;
+        } else {
+            return TRUE;
         }
     }
 }
@@ -238,7 +225,6 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.1]];
     }
     DDLogVerbose(@"[MQTTSessionSynchron] end close");
-    
 }
 
 @end

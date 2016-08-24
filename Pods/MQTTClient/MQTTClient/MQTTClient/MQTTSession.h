@@ -7,7 +7,7 @@
  Using MQTT in your Objective-C application
  
  @author Christoph Krey krey.christoph@gmail.com
- @copyright Copyright (c) 2013-2015, Christoph Krey 
+ @copyright Copyright © 2013-2016, Christoph Krey 
  
  based on Copyright (c) 2011, 2013, 2lemetry LLC
     All rights reserved. This program and the accompanying materials
@@ -27,12 +27,6 @@
 
 @class MQTTSession;
 @class MQTTSSLSecurityPolicy;
-
-/** Session delegate gives your application control over the MQTTSession
- @note all callback methods are optional
- */
-
-@protocol MQTTSessionDelegate <NSObject>
 
 /**
  Enumeration of MQTTSession states
@@ -57,6 +51,36 @@ typedef NS_ENUM(NSInteger, MQTTSessionEvent) {
     MQTTSessionEventProtocolError,
     MQTTSessionEventConnectionClosedByBroker
 };
+
+/**
+ The error domain used for all errors created by MQTTSession
+ */
+extern NSString * const MQTTSessionErrorDomain;
+
+/**
+ The error codes used for all errors created by MQTTSession
+ */
+typedef NS_ENUM(NSInteger, MQTTSessionError) {
+    MQTTSessionErrorConnectionRefused = -8, // Sent if the server closes the connection without sending an appropriate error CONNACK
+    MQTTSessionErrorIllegalMessageReceived = -7,
+    MQTTSessionErrorDroppingOutgoingMessage = -6, // For some reason the value is the same as for MQTTSessionErrorNoResponse
+    MQTTSessionErrorNoResponse = -6, // For some reason the value is the same as for MQTTSessionErrorDroppingOutgoingMessage
+    MQTTSessionErrorEncoderNotReady = -5,
+    MQTTSessionErrorInvalidConnackReceived = -2, // Sent if the message received from server was an invalid connack message
+    MQTTSessionErrorNoConnackReceived = -1, // Sent if first message received from server was no connack message
+    MQTTSessionErrorConnackUnacceptableProtocolVersion = 1, // Value as defined by MQTT Protocol
+    MQTTSessionErrorConnackIdentifierRejected = 2, // Value as defined by MQTT Protocol
+    MQTTSessionErrorConnackServeUnavailable = 3, // Value as defined by MQTT Protocol
+    MQTTSessionErrorConnackBadUsernameOrPassword = 4, // Value as defined by MQTT Protocol
+    MQTTSessionErrorConnackNotAuthorized = 5, // Value as defined by MQTT Protocol
+    MQTTSessionErrorConnackReserved = 6, // Should be value 6-255, as defined by MQTT Protocol
+};
+
+/** Session delegate gives your application control over the MQTTSession
+ @note all callback methods are optional
+ */
+
+@protocol MQTTSessionDelegate <NSObject>
 
 @optional
 
@@ -378,10 +402,13 @@ typedef void (^MQTTPublishHandler)(NSError *error);
 
 /** the transport provider for MQTTClient
  *
- * assign an in instanc of a class implementing the MQTTTransport protocol e.g.
+ * assign an in instance of a class implementing the MQTTTransport protocol e.g.
  * MQTTCFSocketTransport before connecting.
  */
 @property (strong, nonatomic) id <MQTTTransport> transport;
+
+/** certificates an NSArray holding client certificates or nil */
+@property (strong, nonatomic) NSArray *certificates;
 
 /** connect to the given host through the given transport with the given
  *  MQTT session parameters asynchronously
@@ -389,6 +416,7 @@ typedef void (^MQTTPublishHandler)(NSError *error);
  *  @exception NSInternalInconsistencyException if the parameters are invalid
  *
  */
+
 
 - (void)connect;
 

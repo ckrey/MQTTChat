@@ -3,25 +3,12 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 06.12.15.
-//  Copyright © 2015 Christoph Krey. All rights reserved.
+//  Copyright © 2015-2016 Christoph Krey. All rights reserved.
 //
 
 #import "MQTTCFSocketTransport.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTCFSocketTransport()
 @property (strong, nonatomic) MQTTCFSocketEncoder *encoder;
@@ -31,10 +18,11 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 @implementation MQTTCFSocketTransport
 @synthesize state;
 @synthesize delegate;
+@synthesize runLoop;
+@synthesize runLoopMode;
 
 - (instancetype)init {
     self = [super init];
-    self.state = MQTTTransportCreated;
     self.host = @"localhost";
     self.port = 1883;
     self.tls = false;
@@ -80,13 +68,19 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     }
     
     if(!connectError){
+        self.encoder.delegate = nil;
         self.encoder = [[MQTTCFSocketEncoder alloc] init];
         self.encoder.stream = CFBridgingRelease(writeStream);
+        self.encoder.runLoop = self.runLoop;
+        self.encoder.runLoopMode = self.runLoopMode;
         self.encoder.delegate = self;
         [self.encoder open];
         
+        self.decoder.delegate = nil;
         self.decoder = [[MQTTCFSocketDecoder alloc] init];
         self.decoder.stream =  CFBridgingRelease(readStream);
+        self.decoder.runLoop = self.runLoop;
+        self.decoder.runLoopMode = self.runLoopMode;
         self.decoder.delegate = self;
         [self.decoder open];
         

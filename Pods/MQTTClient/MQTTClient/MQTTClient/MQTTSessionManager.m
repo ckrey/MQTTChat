@@ -3,26 +3,13 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 09.07.14.
-//  Copyright (c) 2013-2015 Christoph Krey. All rights reserved.
+//  Copyright © 2013-2016 Christoph Krey. All rights reserved.
 //
 
 #import "MQTTSessionManager.h"
 #import "MQTTCoreDataPersistence.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTSessionManager()
 @property (nonatomic, readwrite) MQTTSessionManagerState state;
@@ -50,6 +37,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 @property (strong, nonatomic) NSString *clientId;
 @property (strong, nonatomic) MQTTSSLSecurityPolicy *securityPolicy;
 @property (strong, nonatomic) NSArray *certificates;
+@property (nonatomic) MQTTProtocolVersion protocolLevel;
 
 @property (strong, nonatomic) NSTimer *disconnectTimer;
 @property (strong, nonatomic) NSTimer *activityTimer;
@@ -62,8 +50,8 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 @property (nonatomic) NSUInteger maxSize;
 @property (nonatomic) NSUInteger maxMessages;
 
-@property (strong, nonatomic) NSMutableDictionary<NSString *, NSNumber *> *internalSubscriptions;
-@property (strong, nonatomic) NSMutableDictionary<NSString *, NSNumber *> *effectiveSubscriptions;
+@property (strong, nonatomic) NSDictionary<NSString *, NSNumber *> *internalSubscriptions;
+@property (strong, nonatomic) NSDictionary<NSString *, NSNumber *> *effectiveSubscriptions;
 
 @end
 
@@ -72,6 +60,18 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 #define BACKGROUND_DISCONNECT_AFTER 8.0
 
 @implementation MQTTSessionManager
+
+- (void)dealloc {
+#if TARGET_OS_IPHONE == 1
+
+  NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
+  [defaultCenter removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
+  [defaultCenter removeObserver:self name:UIApplicationDidEnterBackgroundNotification object:nil];
+  [defaultCenter removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+
+#endif
+}
+
 - (id)init {
     self = [super init];
 
@@ -131,10 +131,12 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 }
 
 - (void)appDidEnterBackground {
+    __weak MQTTSessionManager *weakSelf = self;
     self.backgroundTask = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
-        if (self.backgroundTask) {
-            [[UIApplication sharedApplication] endBackgroundTask:self.backgroundTask];
-            self.backgroundTask = UIBackgroundTaskInvalid;
+        __strong MQTTSessionManager *strongSelf = weakSelf;
+        if (strongSelf.backgroundTask) {
+            [[UIApplication sharedApplication] endBackgroundTask:strongSelf.backgroundTask];
+            strongSelf.backgroundTask = UIBackgroundTaskInvalid;
         }
     }];
 }
@@ -221,6 +223,42 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
      withClientId:(NSString *)clientId
    securityPolicy:(MQTTSSLSecurityPolicy *)securityPolicy
      certificates:(NSArray *)certificates {
+    [self connectTo:host
+               port:port
+                tls:tls
+          keepalive:keepalive
+              clean:clean
+               auth:auth
+               user:user
+               pass:pass
+               will:will
+          willTopic:willTopic
+            willMsg:willMsg
+            willQos:willQos
+     willRetainFlag:willRetainFlag
+       withClientId:clientId
+     securityPolicy:securityPolicy
+       certificates:certificates
+      protocolLevel:MQTTProtocolVersion311]; // use this level as default, keeps it backwards compatible
+}
+
+- (void)connectTo:(NSString *)host
+             port:(NSInteger)port
+              tls:(BOOL)tls
+        keepalive:(NSInteger)keepalive
+            clean:(BOOL)clean
+             auth:(BOOL)auth
+             user:(NSString *)user
+             pass:(NSString *)pass
+             will:(BOOL)will
+        willTopic:(NSString *)willTopic
+          willMsg:(NSData *)willMsg
+          willQos:(MQTTQosLevel)willQos
+   willRetainFlag:(BOOL)willRetainFlag
+     withClientId:(NSString *)clientId
+   securityPolicy:(MQTTSSLSecurityPolicy *)securityPolicy
+     certificates:(NSArray *)certificates
+    protocolLevel:(MQTTProtocolVersion)protocolLevel {
     DDLogVerbose(@"MQTTSessionManager connectTo:%@", host);
     BOOL shouldReconnect = self.session != nil;
     if (!self.session ||
@@ -255,6 +293,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         self.clientId = clientId;
         self.securityPolicy = securityPolicy;
         self.certificates = certificates;
+        self.protocolLevel = protocolLevel;
 
         self.session = [[MQTTSession alloc] initWithClientId:clientId
                                                     userName:auth ? user : nil
@@ -266,21 +305,21 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
                                                      willMsg:willMsg
                                                      willQoS:willQos
                                               willRetainFlag:willRetainFlag
-                                               protocolLevel:4
+                                               protocolLevel:protocolLevel
                                                      runLoop:[NSRunLoop currentRunLoop]
                                                      forMode:NSDefaultRunLoopMode
                                               securityPolicy:securityPolicy
                                                 certificates:certificates];
-        
+
         MQTTCoreDataPersistence *persistence = [[MQTTCoreDataPersistence alloc] init];
-        
+
         persistence.persistent = self.persistent;
         persistence.maxWindowSize = self.maxWindowSize;
         persistence.maxSize = self.maxSize;
         persistence.maxMessages = self.maxMessages;
-        
+
         self.session.persistence = persistence;
-        
+
         self.session.delegate = self;
         self.reconnectTime = RECONNECT_TIMER;
         self.reconnectFlag = FALSE;
@@ -323,7 +362,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 - (void)handleEvent:(MQTTSession *)session event:(MQTTSessionEvent)eventCode error:(NSError *)error
 {
 #ifdef DEBUG
-    const NSDictionary *events = @{
+    __unused const NSDictionary *events = @{
                                    @(MQTTSessionEventConnected): @"connected",
                                    @(MQTTSessionEventConnectionRefused): @"connection refused",
                                    @(MQTTSessionEventConnectionClosed): @"connection closed",
@@ -382,17 +421,22 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 
 - (void)connected:(MQTTSession *)session sessionPresent:(BOOL)sessionPresent {
     if (self.clean || !self.reconnectFlag || !sessionPresent) {
-        if (self.subscriptions && [self.subscriptions count]) {
-            [self.effectiveSubscriptions removeAllObjects];
-            self.effectiveSubscriptions = self.effectiveSubscriptions;
-            [self.session subscribeToTopics:self.subscriptions subscribeHandler:^(NSError *error, NSArray<NSNumber *> *gQoss) {
+        NSDictionary *subscriptions = [self.internalSubscriptions copy];
+        @synchronized(self.effectiveSubscriptions) {
+            self.effectiveSubscriptions = [[NSMutableDictionary alloc] init];
+        }
+        if (subscriptions.count) {
+            [self.session subscribeToTopics:subscriptions subscribeHandler:^(NSError *error, NSArray<NSNumber *> *gQoss) {
                 if (!error) {
-                    NSArray<NSString *> *allTopics = self.subscriptions.allKeys;
+                    NSArray<NSString *> *allTopics = subscriptions.allKeys;
                     for (int i = 0; i < allTopics.count; i++) {
                         NSString *topic = allTopics[i];
                         NSNumber *gQos = gQoss[i];
-                        [self.effectiveSubscriptions setObject:gQos forKey:topic];
-                        self.effectiveSubscriptions = self.effectiveSubscriptions;
+                        @synchronized(self.effectiveSubscriptions) {
+                            NSMutableDictionary *newEffectiveSubscriptions = [self.subscriptions mutableCopy];
+                            [newEffectiveSubscriptions setObject:gQos forKey:topic];
+                            self.effectiveSubscriptions = newEffectiveSubscriptions;
+                        }
                     }
                 }
             }];
@@ -446,34 +490,42 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 
 - (void)setSubscriptions:(NSDictionary<NSString *, NSNumber *> *)newSubscriptions
 {
-    if (self.state==MQTTSessionManagerStateConnected) {
-        for (NSString *topicFilter in self.effectiveSubscriptions) {
+    if (self.state == MQTTSessionManagerStateConnected) {
+        NSDictionary *currentSubscriptions = [self.effectiveSubscriptions copy];
+        
+        for (NSString *topicFilter in currentSubscriptions) {
             if (![newSubscriptions objectForKey:topicFilter]) {
                 [self.session unsubscribeTopic:topicFilter unsubscribeHandler:^(NSError *error) {
                     if (!error) {
-                        [self.effectiveSubscriptions removeObjectForKey:topicFilter];
-                        self.effectiveSubscriptions = self.effectiveSubscriptions;
+                        @synchronized(self.effectiveSubscriptions) {
+                            NSMutableDictionary *newEffectiveSubscriptions = [self.subscriptions mutableCopy];
+                            [newEffectiveSubscriptions removeObjectForKey:topicFilter];
+                            self.effectiveSubscriptions = newEffectiveSubscriptions;
+                        }
                     }
                 }];
             }
         }
         
         for (NSString *topicFilter in newSubscriptions) {
-            if (![self.effectiveSubscriptions objectForKey:topicFilter]) {
+            if (![currentSubscriptions objectForKey:topicFilter]) {
                 NSNumber *number = newSubscriptions[topicFilter];
                 MQTTQosLevel qos = [number unsignedIntValue];
                 [self.session subscribeToTopic:topicFilter atLevel:qos subscribeHandler:^(NSError *error, NSArray<NSNumber *> *gQoss) {
                     if (!error) {
                         NSNumber *gQos = gQoss[0];
-                        [self.effectiveSubscriptions setObject:gQos forKey:topicFilter];
-                        self.effectiveSubscriptions = self.effectiveSubscriptions;
+                        @synchronized(self.effectiveSubscriptions) {
+                            NSMutableDictionary *newEffectiveSubscriptions = [self.subscriptions mutableCopy];
+                            [newEffectiveSubscriptions setObject:gQos forKey:topicFilter];
+                            self.effectiveSubscriptions = newEffectiveSubscriptions;
+                        }
                     }
                 }];
             }
         }
     }
-    _internalSubscriptions=[newSubscriptions mutableCopy];
-    DDLogVerbose(@"MQTTSessionManager internalSubscriptions: %@", _internalSubscriptions);
+    self.internalSubscriptions = newSubscriptions;
+    DDLogVerbose(@"MQTTSessionManager internalSubscriptions: %@", self.internalSubscriptions);
 }
 
 @end

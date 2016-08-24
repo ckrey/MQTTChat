@@ -2,25 +2,12 @@
 // MQTTDecoder.m
 // MQTTClient.framework
 //
-// Copyright (c) 2013-2015, Christoph Krey
+// Copyright © 2013-2016, Christoph Krey
 //
 
 #import "MQTTDecoder.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTDecoder()
 @property (nonatomic) NSMutableArray<NSInputStream *> *streams;
@@ -35,6 +22,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     self.runLoopMode = NSRunLoopCommonModes;
     self.streams = [NSMutableArray arrayWithCapacity:5];
     return self;
+}
+
+- (void)dealloc {
+    [self close];
 }
 
 - (void)decodeMessage:(NSData *)data {
@@ -137,7 +128,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
                 DDLogVerbose(@"[MQTTDecoder] received (%lu)=%@...", (unsigned long)self.dataBuffer.length,
                                     [self.dataBuffer subdataWithRange:NSMakeRange(0, MIN(256, self.dataBuffer.length))]);
                 [self.delegate decoder:self didReceiveMessage:self.dataBuffer];
-                self.dataBuffer = NULL;
+                self.dataBuffer = nil;
                 self.state = MQTTDecoderStateDecodingHeader;
             }
         }
@@ -151,6 +142,8 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         DDLogVerbose(@"[MQTTDecoder] NSStreamEventEndEncountered");
         
         if (self.streams) {
+            [stream setDelegate:nil];
+            [stream close];
             [self.streams removeObject:stream];
             if (self.streams.count) {
                 NSInputStream *stream = [self.streams objectAtIndex:0];

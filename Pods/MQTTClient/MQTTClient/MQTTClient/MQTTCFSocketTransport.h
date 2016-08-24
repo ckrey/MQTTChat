@@ -3,7 +3,7 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 06.12.15.
-//  Copyright © 2015 Christoph Krey. All rights reserved.
+//  Copyright © 2015-2016 Christoph Krey. All rights reserved.
 //
 
 #import "MQTTTransport.h"
@@ -13,7 +13,7 @@
 /** MQTTCFSocketTransport
  * implements an MQTTTransport on top of CFNetwork
  */
-@interface MQTTCFSocketTransport : NSObject <MQTTTransport, MQTTCFSocketDecoderDelegate, MQTTCFSocketEncoderDelegate>
+@interface MQTTCFSocketTransport : MQTTTransport <MQTTTransport, MQTTCFSocketDecoderDelegate, MQTTCFSocketEncoderDelegate>
 
 /** host an NSString containing the hostName or IP address of the host to connect to
  * defaults to @"localhost"

@@ -3,27 +3,14 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 06.12.15.
-//  Copyright © 2015 Christoph Krey. All rights reserved.
+//  Copyright © 2015-2016 Christoph Krey. All rights reserved.
 //
 
 #import "MQTTSSLSecurityPolicyTransport.h"
 #import "MQTTSSLSecurityPolicyEncoder.h"
 #import "MQTTSSLSecurityPolicyDecoder.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTSSLSecurityPolicyTransport()
 @property (strong, nonatomic) MQTTSSLSecurityPolicyEncoder *encoder;
@@ -88,6 +75,8 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         self.encoder.stream = CFBridgingRelease(writeStream);
         self.encoder.securityPolicy = self.tls ? self.securityPolicy : nil;
         self.encoder.securityDomain = self.tls ? self.host : nil;
+        self.encoder.runLoop = self.runLoop;
+        self.encoder.runLoopMode = self.runLoopMode;
         self.encoder.delegate = self;
         [self.encoder open];
         
@@ -95,6 +84,8 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         self.decoder.stream =  CFBridgingRelease(readStream);
         self.decoder.securityPolicy = self.tls ? self.securityPolicy : nil;
         self.decoder.securityDomain = self.tls ? self.host : nil;
+        self.decoder.runLoop = self.runLoop;
+        self.decoder.runLoopMode = self.runLoopMode;
         self.decoder.delegate = self;
         [self.decoder open];
         

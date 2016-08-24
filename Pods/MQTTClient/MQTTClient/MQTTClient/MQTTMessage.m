@@ -2,7 +2,7 @@
 // MQTTMessage.m
 // MQTTClient.framework
 //
-// Copyright (c) 2013-2015, Christoph Krey
+// Copyright © 2013-2016, Christoph Krey
 //
 // based on
 //
@@ -19,20 +19,7 @@
 
 #import "MQTTMessage.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @implementation MQTTMessage
 
@@ -285,7 +272,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     while (length > 0);
     
     // encode message data
-    if (self.data != NULL) {
+    if (self.data != nil) {
         [buffer appendData:self.data];
     }
     
@@ -351,7 +338,10 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
                     message.retainFlag = retainFlag == 1;
                     message.qos = qos;
                     message.data = [data subdataWithRange:NSMakeRange(offset, remainingLength)];
-                    if ((type == MQTTPublish && (qos == MQTTQosLevelAtLeastOnce || qos == MQTTQosLevelExactlyOnce)) ||
+                    if ((type == MQTTPublish &&
+                         (qos == MQTTQosLevelAtLeastOnce ||
+                          qos == MQTTQosLevelExactlyOnce)
+                         ) ||
                         type == MQTTPuback ||
                         type == MQTTPubrec ||
                         type == MQTTPubrel ||
@@ -390,31 +380,31 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
                     }
                     if (type == MQTTConnect) {
                         if (message.data.length < 3) {
-                            DDLogWarn(@"[MQTTMessage] mising connect variable header");
+                            DDLogWarn(@"[MQTTMessage] missing connect variable header");
                             message = nil;
                         }
                     }
                     if (type == MQTTConnack) {
                         if (message.data.length != 2) {
-                            DDLogWarn(@"[MQTTMessage] mising connack variable header");
+                            DDLogWarn(@"[MQTTMessage] missing connack variable header");
                             message = nil;
                         }
                     }
                     if (type == MQTTSubscribe) {
                         if (message.data.length < 3) {
-                            DDLogWarn(@"[MQTTMessage] mising subscribe variable header");
+                            DDLogWarn(@"[MQTTMessage] missing subscribe variable header");
                             message = nil;
                         }
                     }
                     if (type == MQTTSuback) {
-                        if (message.data.length != 3) {
-                            DDLogWarn(@"[MQTTMessage] mising suback variable header");
+                        if (message.data.length < 3) {
+                            DDLogWarn(@"[MQTTMessage] missing suback variable header");
                             message = nil;
                         }
                     }
                     if (type == MQTTUnsubscribe) {
-                        if (message.data.length != 3) {
-                            DDLogWarn(@"[MQTTMessage] mising unsubscribe variable header");
+                        if (message.data.length < 3) {
+                            DDLogWarn(@"[MQTTMessage] missing unsubscribe variable header");
                             message = nil;
                         }
                     }

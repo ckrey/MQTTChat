@@ -1,5 +1,7 @@
-MQTT-Client-Framework
+MQTT-Client-Framework 
 =====================
+
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
 
 an Objective-C native MQTT Framework http://mqtt.org
 
@@ -18,10 +20,23 @@ an Objective-C native MQTT Framework http://mqtt.org
 * Apollo
 * CloudMQTT
 * aws
+* hbmqtt (MQTTv311 only, limitations)
 
 ### Howto
 
 Use the CocoaPod MQTTClient! 
+
+Add this to your Podfile:
+
+```
+pod 'MQTTClient'
+```
+
+Additionally add this subspec if you want to use MQTT over Websockets:
+
+```
+pod 'MQTTClient/Websocket'
+```
 
 Or use the dynamic library created in the MQTTFramework target.
 
@@ -34,22 +49,21 @@ Or include the source from here.
 Create a new client and connect to a broker:
 
 ```objective-c
+#import "MQTTClient.h"
 
-\@interface MyDelegate : ... MQTTSessionDelegate>
+\@interface MyDelegate : ... <MQTTSessionDelegate>
 ...
 
-MQTTSession *session = [[MQTTSession alloc] init];
+        MQTTCFSocketTransport *transport = [[MQTTCFSocketTransport alloc] init];
+        transport.host = @"localhost";
+        transport.port = 1883;
 
-// Set delegate appropriately to receive various events
-// Set MQTTSessionDelegate // See MQTTSession.h for information on various handlers
-// you can subscribe to.
+        MQTTSession *session = [[MQTTSession alloc] init];
+        session.transport = transport;
+        
+	session.delegate = self;
 
-[session setDelegate:self];
-
-session.host = @"localhost";
-session.port = 1883;
-
-[session connectAndWaitTimeout:30];  //this is part of the synchronous API
+	[session connectAndWaitTimeout:30];  //this is part of the synchronous API
 
 ```
 

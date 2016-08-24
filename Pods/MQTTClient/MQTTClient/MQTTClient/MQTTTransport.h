@@ -3,7 +3,7 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 06.12.15.
-//  Copyright © 2015 Christoph Krey. All rights reserved.
+//  Copyright © 2015-2016 Christoph Krey. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -36,7 +36,13 @@
      MQTTTransportClosed
  };
 
-/** MQTTTransportDelegate needs to be set to a class implelenting th MQTTTransportDelegate protocol
+/** runLoop The runLoop where the streams are scheduled. If nil, defaults to [NSRunLoop currentRunLoop]. */
+@property (strong, nonatomic) NSRunLoop * _Nonnull runLoop;
+
+/** runLoopMode The runLoopMode where the streams are scheduled. If nil, defaults to NSRunLoopCommonModes. */
+@property (strong, nonatomic) NSString * _Nonnull runLoopMode;
+
+/** MQTTTransportDelegate needs to be set to a class implementing th MQTTTransportDelegate protocol
  * to receive delegate messages.
  */
 @property (strong, nonatomic) _Nullable id<MQTTTransportDelegate> delegate;
@@ -90,3 +96,7 @@
 - (void)mqttTransportDidClose:(_Nonnull id<MQTTTransport>)mqttTransport;
 
 @end
+
+@interface MQTTTransport : NSObject <MQTTTransport>
+@end
+

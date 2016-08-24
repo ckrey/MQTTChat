@@ -2,25 +2,12 @@
 // MQTTCFSocketDecoder.m
 // MQTTClient.framework
 //
-// Copyright (c) 2013-2015, Christoph Krey
+// Copyright © 2013-2016, Christoph Krey
 //
 
 #import "MQTTCFSocketDecoder.h"
 
-#ifdef LUMBERJACK
-#define LOG_LEVEL_DEF ddLogLevel
-#import <CocoaLumberjack/CocoaLumberjack.h>
-#ifdef DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
-#else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
-#endif
-#else
-#define DDLogVerbose NSLog
-#define DDLogWarn NSLog
-#define DDLogInfo NSLog
-#define DDLogError NSLog
-#endif
+#import "MQTTLog.h"
 
 @interface MQTTCFSocketDecoder()
 
@@ -46,13 +33,14 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
     }
 }
 
+- (void)dealloc {
+    [self close];
+}
+
 - (void)close {
-    if (self.state == MQTTCFSocketDecoderStateReady || self.state == MQTTCFSocketDecoderStateError) {
-        [self.stream close];
-        [self.stream removeFromRunLoop:self.runLoop forMode:self.runLoopMode];
-        [self.stream setDelegate:nil];
-        self.state = MQTTCFSocketDecoderStateInitializing;
-    }
+    [self.stream close];
+    [self.stream removeFromRunLoop:self.runLoop forMode:self.runLoopMode];
+    [self.stream setDelegate:nil];
 }
 
 - (void)stream:(NSStream*)sender handleEvent:(NSStreamEvent)eventCode {
@@ -62,7 +50,7 @@ static const DDLogLevel ddLogLevel = DDLogLevelWarning;
         self.state = MQTTCFSocketDecoderStateReady;
         [self.delegate decoderDidOpen:self];
     }
-
+    
     if (eventCode &  NSStreamEventHasBytesAvailable) {
         DDLogVerbose(@"[MQTTCFSocketDecoder] NSStreamEventHasBytesAvailable");
         if (self.state == MQTTCFSocketDecoderStateInitializing) {
