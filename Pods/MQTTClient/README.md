@@ -1,11 +1,9 @@
 MQTT-Client-Framework 
 =====================
 
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
-
 an Objective-C native MQTT Framework http://mqtt.org
 
-### Tested with
+### Tested with a long list of brokers
 
 * mosquitto
 * paho
@@ -21,8 +19,9 @@ an Objective-C native MQTT Framework http://mqtt.org
 * CloudMQTT
 * aws
 * hbmqtt (MQTTv311 only, limitations)
+* [aedes](https://github.com/mcollina/aedes) 
 
-### Howto
+### As a CocoaPod
 
 Use the CocoaPod MQTTClient! 
 
@@ -31,6 +30,13 @@ Add this to your Podfile:
 ```
 pod 'MQTTClient'
 ```
+which is a short for
+```
+pod 'MQTTClient/Min'
+pod 'MQTTClient/Manager'
+```
+
+The Manager subspec includes the MQTTSessionManager class.
 
 Additionally add this subspec if you want to use MQTT over Websockets:
 
@@ -38,11 +44,35 @@ Additionally add this subspec if you want to use MQTT over Websockets:
 pod 'MQTTClient/Websocket'
 ```
 
+If you want to do your logging with CocoaLumberjack (my suggestion), use
+```
+pod 'MQTTClient/MinL'
+pod 'MQTTClient/ManagerL'
+pod 'MQTTClient/WebsocketL'
+```
+instead.
+
+### As a dynamic library
+
 Or use the dynamic library created in the MQTTFramework target.
+
+### As source
 
 Or include the source from here.
 
-[Documentation](MQTTClient/dist/documentation/html/index.html)
+### With Carthage
+
+[Carthage](https://github.com/Carthage/Carthage)
+
+### docs
+
+Documentation generated with doxygen http://doxygen.org in the `./MQTTClient/dist/documentation` subdirectory.
+
+Here is the [PDF](MQTTClient/dist/documentation/latex/refman.pdf).
+
+You may open the HTML version of the documentation here  [index.html](MQTTClient/dist/documentation/html/index.html)
+
+Run `make install` in the `./MQTTClient/dist/documentation/html` subdirectory to install the the documentation as a DOCSET on your Mac.
 
 ### Usage
 
@@ -101,13 +131,14 @@ Publish a message to a topic:
 	                qos:MQTTQosLevelAtLeastOnce]; // this is part of the asynchronous API
 ```
 
-#### docs
 
-Documentation generated with doxygen http://doxygen.org
 
-#### Comparison MQTT Clients for iOS (incomplete)
+
+### Comparison MQTT Clients for iOS (incomplete)
 
 |Wrapper|---|----|MQTTKit  |Marquette|Moscapsule|Musqueteer|MQTT-Client|MqttSDK|CocoaMQTT|
 |-------|---|----|---------|---------|----------|----------|-----------|-------|---------|
 |       |   |    |Obj-C    |Obj-C    |Swift     |Obj-C     |Obj-C      |Obj-C  |Swift    |
 |Library|IBM|Paho|Mosquitto|Mosquitto|Mosquitto |Mosquitto |native     |native |native   |
+
+

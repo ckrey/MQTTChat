@@ -3,7 +3,7 @@
 //  MQTTClient
 //
 //  Created by Christoph Krey on 06.12.15.
-//  Copyright © 2015-2016 Christoph Krey. All rights reserved.
+//  Copyright © 2015-2017 Christoph Krey. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -41,6 +41,12 @@
 
 /** runLoopMode The runLoopMode where the streams are scheduled. If nil, defaults to NSRunLoopCommonModes. */
 @property (strong, nonatomic) NSString * _Nonnull runLoopMode;
+
+/** host an NSString containing the hostName or IP address of the host to connect to */
+@property (strong, nonatomic) NSString * _Nonnull host;
+
+/** port an unsigned 32 bit integer containing the IP port number to connect to */
+@property (nonatomic) UInt32 port;
 
 /** MQTTTransportDelegate needs to be set to a class implementing th MQTTTransportDelegate protocol
  * to receive delegate messages.

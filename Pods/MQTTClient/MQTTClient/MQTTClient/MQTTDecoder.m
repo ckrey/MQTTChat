@@ -2,7 +2,7 @@
 // MQTTDecoder.m
 // MQTTClient.framework
 //
-// Copyright © 2013-2016, Christoph Krey
+// Copyright © 2013-2017, Christoph Krey. All rights reserved.
 //
 
 #import "MQTTDecoder.h"
@@ -130,6 +130,9 @@
                 [self.delegate decoder:self didReceiveMessage:self.dataBuffer];
                 self.dataBuffer = nil;
                 self.state = MQTTDecoderStateDecodingHeader;
+            } else {
+                DDLogError(@"[MQTTDecoder] oops received (%lu)=%@...", (unsigned long)self.dataBuffer.length,
+                             [self.dataBuffer subdataWithRange:NSMakeRange(0, MIN(256, self.dataBuffer.length))]);
             }
         }
     }
